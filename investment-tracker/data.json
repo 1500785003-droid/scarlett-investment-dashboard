@@ -1,0 +1,301 @@
+{
+  "lastUpdated": "2026-07-27",
+  "lastUpdateNote": "7月27日收盘后更新（黄金收盘价893.97元/克，基金为盘中估算，净值待晚间确认）",
+  "profile": {
+    "name": "个人资产",
+    "age": "毕业3年",
+    "careerStage": "成长期",
+    "salaryRaise": "2026年5月涨薪33%",
+    "financialGoal": "建立体系化理财，扭亏为盈，实现稳健增值"
+  },
+  "income": {
+    "monthlyPreTax": 16000,
+    "monthlyAfterTax": 13400,
+    "yearlyPreTax": 192000,
+    "yearlyAfterTax": 160800,
+    "salaryRaiseDate": "2026-05",
+    "previousPreTax": 12000,
+    "raisePercent": 0.333
+  },
+  "expenses": {
+    "monthlyTotal": 7400,
+    "breakdown": [
+      { "category": "固定支出", "amount": 3000, "items": [
+        { "name": "房租", "amount": 2900 },
+        { "name": "水电燃气", "amount": 100 }
+      ]},
+      { "category": "生活必需", "amount": 2600, "items": [
+        { "name": "餐饮", "amount": 1600 },
+        { "name": "交通", "amount": 300 },
+        { "name": "通讯网络", "amount": 100 },
+        { "name": "日用品", "amount": 200 },
+        { "name": "其他必需", "amount": 400 }
+      ]},
+      { "category": "享受生活", "amount": 1000, "items": [
+        { "name": "聚餐社交", "amount": 400 },
+        { "name": "娱乐爱好", "amount": 350 },
+        { "name": "服饰护肤", "amount": 250 }
+      ]},
+      { "category": "学习成长", "amount": 800, "items": [
+        { "name": "课程书籍", "amount": 400 },
+        { "name": "职场提升", "amount": 250 },
+        { "name": "其他学习", "amount": 150 }
+      ]}
+    ]
+  },
+  "saving": {
+    "monthlyTotal": 6000,
+    "savingRate": 0.448,
+    "yearlyProjection": 72000,
+    "allocation": [
+      { "name": "应急金补充", "amount": 1000, "percent": 0.167, "target": "货币基金/余额宝", "note": "目标3万，已存1万，还需20个月" },
+      { "name": "纳指100定投", "amount": 1500, "percent": 0.25, "target": "广发纳斯达克100ETF联接C", "note": "核心资产，长期持有" },
+      { "name": "A股宽基定投", "amount": 1000, "percent": 0.167, "target": "沪深300+中证500", "note": "打底配置，越跌越买" },
+      { "name": "债券/固收+", "amount": 1000, "percent": 0.167, "target": "纯债基金/固收+", "note": "稳健底仓，降低波动" },
+      { "name": "黄金加仓", "amount": 500, "percent": 0.083, "target": "京东金融黄金", "note": "仅在金价低于900元/克时买" },
+      { "name": "机会资金", "amount": 1000, "percent": 0.167, "target": "货币基金", "note": "大跌时加仓用，平时累积" }
+    ]
+  },
+  "cash": {
+    "totalCash": 15000,
+    "dailySpending": 5000,
+    "emergencyFund": 10000,
+    "opportunityFund": 0,
+    "emergencyFundTarget": 30000,
+    "emergencyFundProgress": 0.333,
+    "emergencyMonths": 1.35
+  },
+  "totalAssets": {
+    "cash": 15000,
+    "investments": 122817,
+    "total": 137817,
+    "totalCost": 152036,
+    "totalPnL": -14219,
+    "totalReturn": -0.094
+  },
+  "assetAllocation": [
+    { "name": "现金/活期", "value": 5000, "color": "#60a5fa" },
+    { "name": "应急金", "value": 10000, "color": "#34d399" },
+    { "name": "黄金", "value": 94628, "color": "#f59e0b" },
+    { "name": "纳指100", "value": 12421, "color": "#10b981" },
+    { "name": "偏股基金", "value": 10429, "color": "#ef4444" },
+    { "name": "资源基金", "value": 3622, "color": "#3b82f6" },
+    { "name": "指数基金", "value": 1218, "color": "#8b5cf6" }
+  ],
+  "assetByCategory": [
+    { "name": "现金类", "value": 15000, "color": "#60a5fa" },
+    { "name": "黄金", "value": 94628, "color": "#f59e0b" },
+    { "name": "权益类", "value": 27690, "color": "#10b981" }
+  ],
+  "savingsHistory": [
+    { "month": "2026-01", "totalAssets": 105000, "savings": 20000, "investments": 85000 },
+    { "month": "2026-02", "totalAssets": 110000, "savings": 22000, "investments": 88000 },
+    { "month": "2026-03", "totalAssets": 125000, "savings": 24000, "investments": 101000 },
+    { "month": "2026-04", "totalAssets": 138000, "savings": 26000, "investments": 112000 },
+    { "month": "2026-05", "totalAssets": 148000, "savings": 28000, "investments": 120000 },
+    { "month": "2026-06", "totalAssets": 142000, "savings": 15000, "investments": 127000 },
+    { "month": "2026-07", "totalAssets": 137817, "savings": 15000, "investments": 122817 }
+  ],
+  "portfolio": {
+    "totalValue": 122318,
+    "totalCost": 147038,
+    "totalPnL": -24720,
+    "totalReturn": -0.168,
+    "todayPnL": 1193,
+    "todayReturn": 0.0099
+  },
+  "gold": {
+    "alipay": {
+      "name": "支付宝黄金",
+      "grams": 74.3126,
+      "costPrice": 1162,
+      "currentPrice": 893.97,
+      "marketValue": 66433,
+      "costValue": 86351,
+      "pnl": -19918,
+      "return": -0.231,
+      "todayPnL": 766
+    },
+    "jd": {
+      "name": "京东金融黄金",
+      "grams": 31.5408,
+      "costPrice": 973.4,
+      "currentPrice": 893.97,
+      "marketValue": 28195,
+      "costValue": 30702,
+      "pnl": -2507,
+      "return": -0.082,
+      "todayPnL": 325,
+      "swingStrategy": {
+        "lowerBand": 850,
+        "upperBand": 950,
+        "gridStep": 20,
+        "gridAmount": 5
+      }
+    },
+    "total": {
+      "grams": 105.8534,
+      "marketValue": 94628,
+      "costValue": 117053,
+      "pnl": -22425,
+      "return": -0.192,
+      "todayPnL": 1091
+    }
+  },
+  "funds": [
+    {
+      "code": "018957",
+      "name": "中航机遇领航混合C",
+      "category": "偏股",
+      "marketValue": 7128.78,
+      "costValue": 9554.98,
+      "pnl": -2426.20,
+      "return": -0.2539,
+      "todayEstimatedReturn": 0.018,
+      "todayEstimatedPnL": 128,
+      "suggestion": "逢高减仓60%",
+      "priority": "high"
+    },
+    {
+      "code": "025209",
+      "name": "永赢先锋半导体智选混合C",
+      "category": "偏股",
+      "marketValue": 3300.59,
+      "costValue": 4582.08,
+      "pnl": -1281.49,
+      "return": -0.2797,
+      "todayEstimatedReturn": 0.010,
+      "todayEstimatedPnL": 33,
+      "suggestion": "逢高减仓70%",
+      "priority": "high"
+    },
+    {
+      "code": "008327",
+      "name": "东财中证通信技术主题指数C",
+      "category": "指数",
+      "marketValue": 1218.19,
+      "costValue": 1676.35,
+      "pnl": -458.16,
+      "return": -0.2733,
+      "todayEstimatedReturn": 0.0245,
+      "todayEstimatedPnL": 30,
+      "suggestion": "反弹清仓",
+      "priority": "medium"
+    },
+    {
+      "code": "023037",
+      "name": "中欧资源精选混合C",
+      "category": "周期",
+      "marketValue": 3622.49,
+      "costValue": 3981.14,
+      "pnl": -358.65,
+      "return": -0.0901,
+      "todayEstimatedReturn": 0.015,
+      "todayEstimatedPnL": 54,
+      "suggestion": "持有观察",
+      "priority": "low"
+    },
+    {
+      "code": "006479",
+      "name": "广发纳斯达克100ETF联接C",
+      "category": "海外",
+      "marketValue": 12421.46,
+      "costValue": 10190.00,
+      "pnl": 2231.46,
+      "return": 0.2190,
+      "todayEstimatedReturn": -0.0115,
+      "todayEstimatedPnL": -143,
+      "suggestion": "继续定投",
+      "priority": "high"
+    }
+  ],
+  "fundsSummary": {
+    "marketValue": 27691.51,
+    "costValue": 29984.55,
+    "pnl": -2293.04,
+    "return": -0.0765,
+    "todayEstimatedPnL": 102
+  },
+  "goals": [
+    {
+      "name": "应急金达标",
+      "target": 30000,
+      "current": 10000,
+      "progress": 0.333,
+      "monthlyContribution": 1000,
+      "etaMonths": 20,
+      "icon": "🛡️"
+    },
+    {
+      "name": "投资回本",
+      "target": 147038,
+      "current": 122318,
+      "progress": 0.832,
+      "monthlyContribution": 5000,
+      "etaMonths": 5,
+      "icon": "📈"
+    },
+    {
+      "name": "总资产20万",
+      "target": 200000,
+      "current": 137817,
+      "progress": 0.689,
+      "monthlyContribution": 6000,
+      "etaMonths": 10,
+      "icon": "🎯"
+    },
+    {
+      "name": "第一个50万",
+      "target": 500000,
+      "current": 137817,
+      "progress": 0.276,
+      "monthlyContribution": 6000,
+      "etaMonths": 60,
+      "icon": "🏆"
+    }
+  ],
+  "milestones": [
+    { "date": "2025-10", "event": "开始关注黄金，小仓位试水", "type": "investment" },
+    { "date": "2025-12", "event": "黄金大涨，加大投入", "type": "investment" },
+    { "date": "2026-03", "event": "黄金见顶，开始下跌", "type": "market" },
+    { "date": "2026-05", "event": "跳槽涨薪33%，税前1.2万→1.6万", "type": "career" },
+    { "date": "2026-06", "event": "基金切换到半导体，买在高点", "type": "investment" },
+    { "date": "2026-07", "event": "建立系统化理财体系", "type": "milestone" }
+  ],
+  "history": [
+    { "date": "2026-07-20", "value": 125000, "pnl": -22036 },
+    { "date": "2026-07-21", "value": 124500, "pnl": -22536 },
+    { "date": "2026-07-22", "value": 123800, "pnl": -23236 },
+    { "date": "2026-07-23", "value": 122500, "pnl": -24536 },
+    { "date": "2026-07-24", "value": 121453, "pnl": -25583 },
+    { "date": "2026-07-25", "value": 121125, "pnl": -25911 },
+    { "date": "2026-07-26", "value": 121125, "pnl": -25911 },
+    { "date": "2026-07-27", "value": 122318, "pnl": -24720, "todayPnL": 1193, "note": "黄金+1091，基金估算+102" }
+  ],
+  "suggestions": [
+    {
+      "type": "saving",
+      "title": "储蓄率优秀",
+      "content": "44.8%的储蓄率非常棒！毕业三年就能存下这么多，说明你自律性很强。继续保持。",
+      "level": "low"
+    },
+    {
+      "type": "income",
+      "title": "涨薪是最大利好",
+      "content": "5月涨薪33%是今年最大的财务利好。工作才是你最大的资产，继续提升职业能力。",
+      "level": "low"
+    },
+    {
+      "type": "risk",
+      "title": "应急金不足",
+      "content": "目前只有1万应急金（约1.3个月生活费），建议优先补到3万。每月存1000，约20个月达标。",
+      "level": "high"
+    },
+    {
+      "type": "action",
+      "title": "黄金仓位过高",
+      "content": "黄金占总资产68.7%，占投资类资产77%，单一资产集中度太高。建议逐步降低到40%以下。",
+      "level": "high"
+    }
+  ]
+}
