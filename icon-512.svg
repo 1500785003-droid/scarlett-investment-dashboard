@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#d97706"/>
+      <stop offset="100%" style="stop-color:#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#0d9488"/>
+      <stop offset="100%" style="stop-color:#2dd4bf"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  
+  <!-- 上升趋势线 - 金色 -->
+  <path d="M 100 380 L 180 340 L 240 300 L 300 200 L 380 140 L 412 108" 
+        stroke="url(#gold)" 
+        stroke-width="16" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        fill="none"/>
+  
+  <!-- 柱状图 - 青色 -->
+  <rect x="120" y="320" width="32" height="90" rx="8" fill="url(#teal)" opacity="0.9"/>
+  <rect x="180" y="290" width="32" height="120" rx="8" fill="url(#teal)" opacity="0.85"/>
+  <rect x="240" y="260" width="32" height="150" rx="8" fill="url(#teal)" opacity="0.8"/>
+  <rect x="300" y="180" width="32" height="230" rx="8" fill="url(#teal)" opacity="0.75"/>
+  <rect x="360" y="120" width="32" height="290" rx="8" fill="url(#gold)" opacity="0.9"/>
+  
+  <!-- 顶部光点 -->
+  <circle cx="412" cy="108" r="14" fill="#fbbf24">
+    <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+</svg>

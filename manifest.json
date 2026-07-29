@@ -1,0 +1,40 @@
+{
+  "name": "投资看板",
+  "short_name": "投资看板",
+  "description": "个人投资组合实时监控看板",
+  "start_url": "./dashboard.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "投资看板",
+      "short_name": "看板",
+      "url": "./dashboard.html"
+    },
+    {
+      "name": "资产总览",
+      "short_name": "资产",
+      "url": "./wealth-dashboard.html"
+    }
+  ]
+}
