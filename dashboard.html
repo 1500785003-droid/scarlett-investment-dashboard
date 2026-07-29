@@ -7,11 +7,12 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f59e0b">
+<meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="投资看板">
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>投资看板 | Investment Dashboard</title>
 <style>
   @font-face {
@@ -1267,6 +1268,31 @@
 </style>
 </head>
 <body>
+<!-- 错误提示面板（默认隐藏） -->
+<div id="errorPanel" style="display:none;position:fixed;top:0;left:0;right:0;background:#fee2e2;color:#991b1b;padding:12px 16px;font-size:14px;z-index:99999;word-break:break-all;">
+  <div style="font-weight:bold;margin-bottom:4px;">⚠️ 页面加载出错</div>
+  <div id="errorMsg" style="font-size:12px;"></div>
+</div>
+<script>
+  // 全局错误捕获 - 防止白屏
+  window.onerror = function(msg, url, line, col, error) {
+    var panel = document.getElementById('errorPanel');
+    var msgEl = document.getElementById('errorMsg');
+    if (panel && msgEl) {
+      msgEl.textContent = msg + ' (' + line + ':' + col + ')';
+      panel.style.display = 'block';
+    }
+    return false;
+  };
+  window.addEventListener('unhandledrejection', function(e) {
+    var panel = document.getElementById('errorPanel');
+    var msgEl = document.getElementById('errorMsg');
+    if (panel && msgEl) {
+      msgEl.textContent = 'Promise错误: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+      panel.style.display = 'block';
+    }
+  });
+</script>
 <div class="container">
 
   <!-- Header -->
@@ -1307,7 +1333,7 @@
       <div class="hero-mini-card">
         <div class="mini-label">🥇 黄金（105.85克）</div>
         <div class="mini-value" id="heroGoldValue">¥93,157</div>
-        <div class="mini-change negative" id="heroGoldChange">-0.6% 今日</div>
+        <div class="mini-change negative" id="heroGoldChange">-0.6% -¥562 今日</div>
         <div class="mini-stats">
           <div class="mini-stat">
             <span class="mini-stat-label">成本均价</span>
@@ -1326,7 +1352,7 @@
       <div class="hero-mini-card">
         <div class="mini-label">📈 基金（5只）</div>
         <div class="mini-value" id="heroFundValue">¥27,692</div>
-        <div class="mini-change negative" id="heroFundChange">-2.6% 今日</div>
+        <div class="mini-change negative" id="heroFundChange">-2.6% -¥739 今日</div>
         <div class="mini-stats">
           <div class="mini-stat">
             <span class="mini-stat-label">总成本</span>
@@ -1797,7 +1823,7 @@
 </div>
 
 <script src="echarts.min.js"></script>
-<script src="data.js?v=20260728recap"></script>
+<script src="data.js?v=ms64wwvl"></script>
 <script>
 // ========== 实时行情数据获取 ==========
 // 使用新浪财经公开API（JSONP方式，无跨域问题）
@@ -2158,10 +2184,37 @@ function renderHero() {
   
   const goldEl = document.getElementById('heroGoldValue');
   if (goldEl) goldEl.textContent = '¥' + p.goldValue.toLocaleString();
+  
+  // 计算黄金今日盈亏金额
+  const goldGrams = p.goldValue / goldPrice;
+  const goldTodayPnl = Math.round(goldGrams * goldChange * 100) / 100;
+  
   const goldChangeEl = document.getElementById('heroGoldChange');
   if (goldChangeEl) {
-    goldChangeEl.textContent = `${goldUp ? '+' : ''}${goldChangePct}% 今日`;
+    goldChangeEl.textContent = `${goldUp ? '+' : ''}${goldChangePct}% ${goldUp ? '+' : '-'}¥${Math.abs(Math.round(goldTodayPnl)).toLocaleString()} 今日`;
     goldChangeEl.className = 'mini-change ' + (goldUp ? 'positive' : 'negative');
+  }
+  
+  // 更新黄金卡片统计栏（和基金一致）
+  const goldStats = document.querySelectorAll('.hero-mini-card')[0];
+  if (goldStats) {
+    const statVals = goldStats.querySelectorAll('.mini-stat-val');
+    const statLabels = goldStats.querySelectorAll('.mini-stat-label');
+    if (statLabels[0]) statLabels[0].textContent = '持有金额';
+    if (statLabels[1]) statLabels[1].textContent = '今日收益';
+    if (statLabels[2]) statLabels[2].textContent = '累计盈亏';
+    if (statVals[0]) statVals[0].textContent = '¥' + p.goldValue.toLocaleString();
+    if (statVals[1]) {
+      statVals[1].textContent = `${goldUp ? '+' : ''}¥${Math.round(goldTodayPnl).toLocaleString()}`;
+      statVals[1].className = 'mini-stat-val ' + (goldUp ? 'pnl-positive' : 'pnl-negative');
+    }
+    if (statVals[2]) {
+      const goldTotalPnl = p.totalValue - p.goldValue - (data.portfolio.totalCost - 113840.45);
+      const goldCost = 113840.45; // 黄金成本
+      const goldPnl = p.goldValue - goldCost;
+      statVals[2].textContent = `${goldPnl >= 0 ? '+' : ''}¥${Math.round(goldPnl).toLocaleString()}`;
+      statVals[2].className = 'mini-stat-val ' + (goldPnl >= 0 ? 'pnl-positive' : 'pnl-negative');
+    }
   }
   
   // 基金数据
@@ -2179,7 +2232,7 @@ function renderHero() {
   if (fundEl) fundEl.textContent = '¥' + p.fundValue.toLocaleString();
   const fundChangeEl = document.getElementById('heroFundChange');
   if (fundChangeEl) {
-    fundChangeEl.textContent = `${fundTodayUp ? '+' : ''}¥${Math.round(fundTodayPnl).toLocaleString()} 今日`;
+    fundChangeEl.textContent = `${fundTodayUp ? '+' : ''}${fundTodayPct.toFixed(2)}% ${fundTodayUp ? '+' : '-'}¥${Math.abs(Math.round(fundTodayPnl)).toLocaleString()} 今日`;
     fundChangeEl.className = 'mini-change ' + (fundTodayUp ? 'positive' : 'negative');
   }
   
@@ -2205,10 +2258,10 @@ function renderHero() {
 
 // ========== RENDER GOLD SECTION (黄金网格策略) ==========
 function renderGoldSection() {
-  const goldPrice = data.goldHistory[data.goldHistory.length - 1]?.price || 890;
+  const goldPrice = Math.round(data.goldHistory[data.goldHistory.length - 1]?.price || 890);
   const prevGoldPrice = data.goldHistory[data.goldHistory.length - 2]?.price || goldPrice;
   const goldChange = goldPrice - prevGoldPrice;
-  const goldChangePct = prevGoldPrice ? ((goldChange / prevGoldPrice) * 100).toFixed(2) : 0;
+  const goldChangePct = prevGoldPrice ? ((goldChange / prevGoldPrice) * 100).toFixed(1) : 0;
   const goldUp = goldChange >= 0;
   
   // 网格参数
@@ -2849,15 +2902,18 @@ async function loadRealtimeData() {
 
 // 用实时金价更新黄金模块
 function updateGoldWithRealtime(gold) {
+  const price = Math.round(gold.price);
+  const changePercent = Number(gold.changePercent).toFixed(1);
+  
   // 更新当前价显示
   const currentPriceEl = document.getElementById('goldCurrentPrice');
-  if (currentPriceEl) currentPriceEl.textContent = '¥' + gold.price;
+  if (currentPriceEl) currentPriceEl.textContent = '¥' + price;
   
   // 更新今日涨跌
   const todayChangeEl = document.getElementById('goldTodayChange');
   if (todayChangeEl) {
     const up = gold.change >= 0;
-    todayChangeEl.textContent = `${up ? '+' : ''}${gold.changePercent}%`;
+    todayChangeEl.textContent = `${up ? '+' : ''}${changePercent}%`;
     todayChangeEl.style.color = up ? 'var(--danger)' : 'var(--accent2)';
   }
   
@@ -2865,7 +2921,7 @@ function updateGoldWithRealtime(gold) {
   const gridLow = 850;
   const gridHigh = 950;
   const gridRange = gridHigh - gridLow;
-  const positionPct = Math.max(0, Math.min(100, ((gold.price - gridLow) / gridRange) * 100));
+  const positionPct = Math.max(0, Math.min(100, ((price - gridLow) / gridRange) * 100));
   
   // 更新进度条
   const gridBarFill = document.querySelector('.grid-bar-fill');
@@ -2873,18 +2929,18 @@ function updateGoldWithRealtime(gold) {
   if (gridBarFill) gridBarFill.style.width = positionPct + '%';
   if (gridBarMarker) {
     gridBarMarker.style.left = positionPct + '%';
-    gridBarMarker.setAttribute('data-price', `当前 ¥${gold.price}`);
+    gridBarMarker.setAttribute('data-price', `当前 ¥${price}`);
   }
   
   // 更新信号
   let signal = '观望';
   let signalColor = 'var(--accent)';
   let signalBg = 'rgba(245,158,11,0.15)';
-  if (gold.price <= 870) {
+  if (price <= 870) {
     signal = '买入';
     signalColor = 'var(--accent2)';
     signalBg = 'rgba(16,185,129,0.15)';
-  } else if (gold.price >= 910) {
+  } else if (price >= 910) {
     signal = '卖出';
     signalColor = 'var(--danger)';
     signalBg = 'rgba(239,68,68,0.15)';
@@ -2897,9 +2953,49 @@ function updateGoldWithRealtime(gold) {
     signalBadge.style.color = signalColor;
   }
   
+  // 计算距下一档买入/卖出
+  const step = 10;
+  let nextBuy = null, nextSell = null, distToBuy = 0, distToSell = 0;
+  for (let p = gridLow; p < price; p += step) {
+    nextBuy = p;
+  }
+  for (let p = gridLow + step; p <= gridHigh; p += step) {
+    if (p > price) {
+      nextSell = p;
+      break;
+    }
+  }
+  distToBuy = nextBuy ? (price - nextBuy) : 0;
+  distToSell = nextSell ? (nextSell - price) : 0;
+  
+  // 更新距下一档买入
+  const nextBuyEl = document.getElementById('goldNextBuy');
+  if (nextBuyEl) {
+    nextBuyEl.textContent = nextBuy ? `↓ ¥${distToBuy}` : '已到下沿';
+    nextBuyEl.style.color = 'var(--accent2)';
+  }
+  
+  // 更新距下一档卖出
+  const nextSellEl = document.getElementById('goldNextSell');
+  if (nextSellEl) {
+    nextSellEl.textContent = nextSell ? `↑ ¥${distToSell}` : '已到上沿';
+    nextSellEl.style.color = 'var(--danger)';
+  }
+  
+  // 更新信号文字
+  const signalTextEl = document.getElementById('goldSignalText');
+  if (signalTextEl) {
+    let positionDesc = '';
+    if (price < 870) positionDesc = '接近下沿，处于买入区间';
+    else if (price > 930) positionDesc = '接近上沿，处于卖出区间';
+    else positionDesc = '处于震荡区间中部';
+    
+    signalTextEl.innerHTML = `金价 ${price} 元${positionDesc}，${nextBuy ? `距下一档买入价 ${nextBuy} 还有 ${distToBuy} 元空间` : '已在买入区间'}，${nextSell ? `距下一档卖出价 ${nextSell} 还有 ${distToSell} 元空间` : '已在卖出区间'}。${signal === '观望' ? '建议观望，耐心等待触发价。' : signal === '买入' ? '可考虑分批买入。' : '可考虑分批卖出。'}`;
+  }
+  
   // 更新黄金市值（实时计算）
   const goldGrams = data.portfolio.goldValue / 894; // 用当前记录的市值反推克数
-  const realtimeGoldValue = Math.round(goldGrams * gold.price);
+  const realtimeGoldValue = Math.round(goldGrams * price);
   
   const goldEl = document.getElementById('heroGoldValue');
   if (goldEl) goldEl.textContent = '¥' + realtimeGoldValue.toLocaleString();
@@ -2907,7 +3003,8 @@ function updateGoldWithRealtime(gold) {
   const goldChangeEl = document.getElementById('heroGoldChange');
   if (goldChangeEl) {
     const up = gold.change >= 0;
-    goldChangeEl.textContent = `${up ? '+' : ''}${gold.changePercent}% 今日`;
+    const changeAmount = Math.round(goldGrams * gold.change);
+    goldChangeEl.textContent = `${up ? '+' : ''}${changePercent}% ${up ? '+' : '-'}¥${Math.abs(changeAmount).toLocaleString()} 今日`;
     goldChangeEl.className = 'mini-change ' + (up ? 'positive' : 'negative');
   }
 }
@@ -3171,8 +3268,19 @@ function updateFundsWithRealtime(funds) {
   data.funds.forEach((fund, index) => {
     const realtime = fundMap[fund.code];
     if (realtime) {
-      // 计算今日收益金额（估算）
-      const todayChangeAmount = Math.round(fund.value * (realtime.estimateChange / 100) * 100) / 100;
+      // 先确保有 changeAmount（基于今日收盘价计算的）
+      if (fund.today && fund.today.change && fund.today.changeAmount === undefined) {
+        const changeStr = fund.today.change.replace('%', '').replace('+', '');
+        const changePct = parseFloat(changeStr) || 0;
+        const changeRate = changePct / 100;
+        // 正确公式：今日盈亏 = 今日市值 × 涨跌幅 ÷ (1 + 涨跌幅)
+        fund.today.changeAmount = Math.round(fund.value * changeRate / (1 + changeRate) * 100) / 100;
+      }
+      // 昨日市值 = 当前市值 - 今日盈亏（以收盘价计算的）
+      const yesterdayValue = fund.value - (fund.today?.changeAmount || 0);
+      // 实时今日收益 = 昨日市值 × 实时涨跌幅
+      // 因为实时涨跌幅是相对于昨日净值的
+      const todayChangeAmount = Math.round(yesterdayValue * (realtime.estimateChange / 100) * 100) / 100;
       
       // 更新基金的今日数据
       fund.today.change = `${realtime.estimateChange >= 0 ? '+' : ''}${realtime.estimateChange}%`;
@@ -3193,7 +3301,7 @@ function updateFundsWithRealtime(funds) {
   // 更新顶部基金卡片
   const fundChangeEl = document.getElementById('heroFundChange');
   if (fundChangeEl) {
-    fundChangeEl.textContent = `${fundTodayUp ? '+' : ''}¥${Math.round(fundTodayPnl).toLocaleString()} 今日`;
+    fundChangeEl.textContent = `${fundTodayUp ? '+' : ''}${fundTodayPct.toFixed(2)}% ${fundTodayUp ? '+' : '-'}¥${Math.abs(Math.round(fundTodayPnl)).toLocaleString()} 今日`;
     fundChangeEl.className = 'mini-change ' + (fundTodayUp ? 'positive' : 'negative');
   }
   
@@ -3411,13 +3519,40 @@ function updateRefreshTime() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const updateTimeEl = document.getElementById('updateTime');
+  
+  // 判断是否在交易时间
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const day = now.getDay();
+  const isWeekday = day >= 1 && day <= 5;
+  const isTradingTime = isWeekday && (
+    (hour === 9 && minute >= 30) || 
+    (hour >= 10 && hour < 12) ||
+    (hour >= 13 && hour < 15)
+  );
+  
   if (updateTimeEl) {
-    updateTimeEl.textContent = `实时更新 ${timeStr}`;
+    if (realtimeFunds && realtimeFunds.length > 0 && isTradingTime) {
+      updateTimeEl.textContent = `🔴 实时行情 ${timeStr}`;
+    } else if (realtimeGold || (realtimeIndices && realtimeIndices.length > 0)) {
+      updateTimeEl.textContent = `📡 实时更新 ${timeStr}`;
+    } else {
+      updateTimeEl.textContent = `📊 收盘数据 ${timeStr}`;
+    }
   }
+  
   const dotEl = document.getElementById('realtimeDot');
   if (dotEl) {
-    dotEl.style.background = '#10b981';
-    dotEl.style.animation = 'pulse 2s infinite';
+    if (realtimeFunds && realtimeFunds.length > 0 && isTradingTime) {
+      dotEl.style.background = '#ef4444';
+      dotEl.style.animation = 'pulse 1s infinite';
+    } else if (realtimeGold || (realtimeIndices && realtimeIndices.length > 0)) {
+      dotEl.style.background = '#10b981';
+      dotEl.style.animation = 'pulse 2s infinite';
+    } else {
+      dotEl.style.background = '#64748b';
+      dotEl.style.animation = 'none';
+    }
   }
 }
 
@@ -3432,17 +3567,78 @@ function manualRefresh() {
 
 // 页面加载完成后开始加载实时数据
 window.addEventListener('load', function() {
+  // 注册 Service Worker (PWA 支持)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.log('SW registration failed:', err);
+    });
+  }
+  
   // 先显示基础数据的时间
   const updateTime = new Date(data.updateTime);
   const dateStr = updateTime.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
   document.getElementById('updateTime').textContent = `${dateStr} · 加载中...`;
   
-  // 立即加载一次
+  // 先用 data.js 的数据生成分析（确保非交易时间也有分析）
+  initAnalysisFromData();
+  
+  // 立即加载一次实时数据
   loadRealtimeData();
   
-  // 每3分钟刷新一次（交易时间内）
+  // 每3分钟刷新一次
   refreshInterval = setInterval(loadRealtimeData, 3 * 60 * 1000);
 });
+
+// 用 data.js 的数据初始化所有分析模块
+function initAnalysisFromData() {
+  // 1. 大盘择时 - 用 data.market 里的指数数据
+  if (data.market && data.market.indices) {
+    const indices = data.market.indices.map(i => ({
+      name: i.name,
+      value: i.value,
+      change: i.change
+    }));
+    generateMarketTiming(indices);
+  }
+  
+  // 2. 黄金模块 - 用 goldHistory 最新数据
+  if (data.goldHistory && data.goldHistory.length > 0) {
+    const latestGold = data.goldHistory[data.goldHistory.length - 1];
+    const prevGold = data.goldHistory[data.goldHistory.length - 2] || latestGold;
+    const goldData = {
+      price: latestGold.price,
+      change: Math.round((latestGold.price - prevGold.price) * 100) / 100,
+      changePercent: Math.round(((latestGold.price - prevGold.price) / prevGold.price) * 10000) / 100
+    };
+    realtimeGold = goldData;
+    updateGoldWithRealtime(goldData);
+  }
+  
+  // 3. 基金策略 - 用 data.funds 里的 today 数据
+  if (data.funds && data.funds.length > 0) {
+    // 确保每只基金都有 today.changeAmount
+    data.funds.forEach(f => {
+      if (f.today && f.today.change && f.today.changeAmount === undefined) {
+        const changeStr = f.today.change.replace('%', '').replace('+', '');
+        const changePct = parseFloat(changeStr) || 0;
+        const changeRate = changePct / 100;
+        // 正确公式：今日盈亏 = 今日市值 × 涨跌幅 ÷ (1 + 涨跌幅)
+        f.today.changeAmount = Math.round(f.value * changeRate / (1 + changeRate) * 100) / 100;
+      }
+    });
+    generateSuggestions();
+    renderFundTable();
+  }
+  
+  // 4. 更新时间显示
+  const updateTimeEl = document.getElementById('updateTime');
+  if (updateTimeEl && data.updateTime) {
+    const t = new Date(data.updateTime);
+    const dateStr = t.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+    const timeStr = t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    updateTimeEl.textContent = `${dateStr} ${timeStr} · 收盘数据`;
+  }
+}
 
 function checkDataUpdate() {
   fetch('data.js?_t=' + Date.now())

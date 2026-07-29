@@ -3,7 +3,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="投资看板">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>个人资产看板 | Personal Wealth Dashboard</title>
 <style>
   @font-face {
@@ -760,6 +766,31 @@
 </style>
 </head>
 <body>
+<!-- 错误提示面板（默认隐藏） -->
+<div id="errorPanel" style="display:none;position:fixed;top:0;left:0;right:0;background:#fee2e2;color:#991b1b;padding:12px 16px;font-size:14px;z-index:99999;word-break:break-all;">
+  <div style="font-weight:bold;margin-bottom:4px;">⚠️ 页面加载出错</div>
+  <div id="errorMsg" style="font-size:12px;"></div>
+</div>
+<script>
+  // 全局错误捕获 - 防止白屏
+  window.onerror = function(msg, url, line, col, error) {
+    var panel = document.getElementById('errorPanel');
+    var msgEl = document.getElementById('errorMsg');
+    if (panel && msgEl) {
+      msgEl.textContent = msg + ' (' + line + ':' + col + ')';
+      panel.style.display = 'block';
+    }
+    return false;
+  };
+  window.addEventListener('unhandledrejection', function(e) {
+    var panel = document.getElementById('errorPanel');
+    var msgEl = document.getElementById('errorMsg');
+    if (panel && msgEl) {
+      msgEl.textContent = 'Promise错误: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+      panel.style.display = 'block';
+    }
+  });
+</script>
 <div class="container">
 
   <!-- Header -->
@@ -819,12 +850,18 @@
     </div>
     <div class="kpi-card">
       <div class="kpi-label">🥇 黄金资产</div>
-      <div class="kpi-value">¥94,627</div>
+      <div class="kpi-value" id="goldAssetValue">¥94,627</div>
+      <div class="kpi-sub" id="goldAssetChange" style="margin-bottom: 2px;"><span class="pnl-negative">-1.13% -¥1,072 今日</span></div>
+      <div class="kpi-sub" id="goldAssetTotalPnl" style="margin-bottom: 2px;"><span class="pnl-negative">-20.4% -¥24,256 累计</span></div>
+      <div class="kpi-sub" id="goldAssetCost" style="margin-bottom: 2px;">成本 ¥113,840</div>
       <div class="kpi-sub">占总资产 <span class="down">67.6%</span> · 偏高</div>
     </div>
     <div class="kpi-card green">
       <div class="kpi-label">📈 权益类资产</div>
-      <div class="kpi-value">¥30,357</div>
+      <div class="kpi-value" id="equityAssetValue">¥30,357</div>
+      <div class="kpi-sub" id="equityAssetChange" style="margin-bottom: 2px;"><span class="pnl-negative">-4.52% -¥1,443 今日</span></div>
+      <div class="kpi-sub" id="equityAssetTotalPnl" style="margin-bottom: 2px;"><span class="pnl-negative">-7.6% -¥2,293 累计</span></div>
+      <div class="kpi-sub" id="equityAssetCost" style="margin-bottom: 2px;">成本 ¥29,985</div>
       <div class="kpi-sub">占总资产 <span class="up">21.7%</span></div>
     </div>
     <div class="kpi-card purple">
@@ -1340,7 +1377,7 @@
   </div>
 </div>
 
-<script src="data.js"></script>
+<script src="data.js?v=20260729"></script>
 <script src="echarts.min.js"></script>
 <script>
 const style = getComputedStyle(document.documentElement);
@@ -1587,6 +1624,7 @@ let investData = {
   },
   funds: []
 };
+let userModifiedInvest = false; // 用户是否手动修改过投资数据
 
 // 从 data.js 初始化基金数据
 function initFundsFromData() {
@@ -1598,16 +1636,43 @@ function initFundsFromData() {
       value: f.value,
       cost: f.cost
     }));
+    // 同步黄金数据
+    if (data.portfolio && data.goldHistory) {
+      const lastGold = data.goldHistory[data.goldHistory.length - 1];
+      if (lastGold) {
+        investData.gold.price = lastGold.price;
+      }
+      // 计算黄金克数
+      if (data.portfolio.goldValue && lastGold && lastGold.price > 0) {
+        investData.gold.grams = Math.round((data.portfolio.goldValue / lastGold.price) * 100) / 100;
+      }
+    }
   }
-  // 从 localStorage 读取保存的投资数据
+  
+  // 从 localStorage 读取保存的投资数据（仅当用户手动修改过时才使用）
   try {
     const saved = localStorage.getItem('invest_dashboard_data');
-    if (saved) {
+    const userModified = localStorage.getItem('invest_user_modified');
+    if (saved && userModified === 'true') {
       const savedData = JSON.parse(saved);
       if (savedData.gold) investData.gold = { ...investData.gold, ...savedData.gold };
       if (savedData.funds && savedData.funds.length > 0) {
-        investData.funds = savedData.funds;
+        // 只更新基金的value（用户手动修改的部分），其他信息用data.js的
+        savedData.funds.forEach(savedFund => {
+          const fund = investData.funds.find(f => f.code === savedFund.code);
+          if (fund) {
+            fund.value = savedFund.value;
+          }
+          // 同步更新 data.funds 中的 value，确保实时估值计算基于正确的基准
+          if (typeof data !== 'undefined' && data.funds) {
+            const df = data.funds.find(f => f.code === savedFund.code);
+            if (df) {
+              df.value = savedFund.value;
+            }
+          }
+        });
       }
+      userModifiedInvest = true;
     }
   } catch (e) {
     console.error('读取投资数据失败:', e);
@@ -1805,6 +1870,7 @@ function saveInvestData() {
   // 保存到 localStorage
   try {
     localStorage.setItem('invest_dashboard_data', JSON.stringify(investData));
+    localStorage.setItem('invest_user_modified', 'true'); // 标记用户手动修改过
   } catch (e) {
     console.error('保存投资数据失败:', e);
   }
@@ -1825,6 +1891,16 @@ function saveInvestData() {
     data.portfolio.totalCost = Math.round(investData.gold.grams * investData.gold.costPrice + fundCost);
     data.portfolio.totalPnL = data.portfolio.totalValue - data.portfolio.totalCost;
     data.portfolio.totalReturn = data.portfolio.totalCost > 0 ? data.portfolio.totalPnL / data.portfolio.totalCost : 0;
+    
+    // 同步更新 data.funds 中每只基金的 value，确保实时估值计算基于正确的基准
+    if (data.funds) {
+      investData.funds.forEach(f => {
+        const df = data.funds.find(d => d.code === f.code);
+        if (df) {
+          df.value = f.value;
+        }
+      });
+    }
 
     // 更新黄金历史最新价
     if (data.goldHistory && data.goldHistory.length > 0) {
@@ -1862,6 +1938,10 @@ function saveInvestData() {
   }
 
   closeModal('investModal');
+  // 用户修改了持仓数据，重置实时基准值，下次刷新时重新计算
+  if (typeof wealthRealtimeBase !== 'undefined') {
+    wealthRealtimeBase = null;
+  }
   renderWealthData();
 }
 
@@ -1957,6 +2037,83 @@ function renderWealthData() {
   const investValue = typeof data !== 'undefined' ? data.portfolio.totalValue : 124984;
   const investCost = typeof data !== 'undefined' ? data.portfolio.totalCost : 143825;
   const investPnL = typeof data !== 'undefined' ? data.portfolio.totalPnL : -18840;
+  const goldValue = typeof data !== 'undefined' ? data.portfolio.goldValue : 94627;
+  const fundValue = typeof data !== 'undefined' ? data.portfolio.fundValue : 30357;
+  
+  // 计算今日涨跌（从 data 中获取）
+  let goldTodayChange = 0;
+  let goldTodayPnl = 0;
+  let fundTodayChange = 0;
+  let fundTodayPnl = 0;
+  
+  // 计算累计盈亏
+  let goldTotalPnl = 0;
+  let goldTotalReturn = 0;
+  let fundTotalPnl = 0;
+  let fundTotalReturn = 0;
+  const GOLD_COST = 113840.45; // 黄金成本（与 dashboard.html 保持一致）
+  
+  if (typeof data !== 'undefined' && data.goldHistory && data.goldHistory.length >= 2) {
+    const lastGold = data.goldHistory[data.goldHistory.length - 1];
+    const prevGold = data.goldHistory[data.goldHistory.length - 2];
+    const goldGrams = goldValue / lastGold.price;
+    goldTodayChange = ((lastGold.price - prevGold.price) / prevGold.price) * 100;
+    goldTodayPnl = goldGrams * (lastGold.price - prevGold.price);
+  }
+  
+  // 黄金累计盈亏 = 当前市值 - 成本
+  goldTotalPnl = goldValue - GOLD_COST;
+  goldTotalReturn = GOLD_COST > 0 ? (goldTotalPnl / GOLD_COST) * 100 : 0;
+  
+  if (typeof data !== 'undefined' && data.funds) {
+    let fundYesterdayValue = 0;
+    let fundTotalCost = 0;
+    
+    data.funds.forEach(f => {
+      // 先确保每只基金有 today.changeAmount（从百分比计算）
+      // 正确公式：今日盈亏 = 今日市值 × 涨跌幅 ÷ (1 + 涨跌幅)
+      // 因为：涨跌幅 = 今日盈亏 / 昨日市值，而 昨日市值 = 今日市值 - 今日盈亏
+      if (f.today && f.today.change && f.today.changeAmount === undefined) {
+        const changeStr = f.today.change.replace('%', '').replace('+', '');
+        const changePct = parseFloat(changeStr) || 0;
+        const changeRate = changePct / 100;
+        f.today.changeAmount = Math.round(f.value * changeRate / (1 + changeRate) * 100) / 100;
+      }
+      
+      // 今日涨跌金额
+      const todayChange = f.today?.changeAmount || 0;
+      fundTodayPnl += todayChange;
+      
+      // 昨日市值 = 当前市值 - 今日涨跌
+      fundYesterdayValue += f.value - todayChange;
+      
+      // 累计成本
+      fundTotalCost += f.cost || 0;
+    });
+    
+    // 今日涨跌幅 = 今日盈亏 / 昨日市值
+    if (fundYesterdayValue > 0) {
+      fundTodayChange = (fundTodayPnl / fundYesterdayValue) * 100;
+    }
+    
+    // 基金累计盈亏 = 当前总市值 - 总成本（基于实时市值计算）
+    fundTotalPnl = fundValue - fundTotalCost;
+    if (fundTotalCost > 0) {
+      fundTotalReturn = (fundTotalPnl / fundTotalCost) * 100;
+    }
+  }
+  
+  // 如果有实时计算的今日盈亏数据，优先使用（避免 goldHistory 被修改后的计算误差）
+  if (typeof data !== 'undefined' && data.portfolio) {
+    if (data.portfolio.goldTodayPnl !== undefined && data.portfolio.goldTodayChange !== undefined) {
+      goldTodayPnl = data.portfolio.goldTodayPnl;
+      goldTodayChange = data.portfolio.goldTodayChange;
+    }
+    if (data.portfolio.fundTodayPnl !== undefined && data.portfolio.fundTodayChange !== undefined) {
+      fundTodayPnl = data.portfolio.fundTodayPnl;
+      fundTodayChange = data.portfolio.fundTodayChange;
+    }
+  }
 
   // 总资产
   const totalAsset = investValue + cash;
@@ -1977,14 +2134,119 @@ function renderWealthData() {
   if (kpiValues[1]) kpiValues[1].textContent = '¥' + monthlySaving.toLocaleString();
   if (kpiValues[2]) kpiValues[2].textContent = savingRate.toFixed(1) + '%';
 
-  // 资产分布 KPI
-  const cards = document.querySelectorAll('.kpi-card');
-  if (cards[0]) {
-    cards[0].querySelector('.kpi-value').textContent = '¥' + cash.toLocaleString();
-    cards[0].querySelector('.kpi-sub .up').textContent = ((cash / totalAsset) * 100).toFixed(1) + '%';
+  // ====== 资产分布 4 个 KPI 卡片 ======
+  const kpiCards = document.querySelectorAll('.kpi-card');
+  // 现金资产
+  if (kpiCards[0]) {
+    kpiCards[0].querySelector('.kpi-value').textContent = '¥' + cash.toLocaleString();
+    const cashPct = ((cash / totalAsset) * 100).toFixed(1);
+    kpiCards[0].querySelector('.kpi-sub span').textContent = cashPct + '%';
   }
-  if (cards[3]) {
-    cards[3].querySelector('.kpi-value').textContent = '¥0';
+  // 黄金资产
+  if (kpiCards[1]) {
+    const valEl = kpiCards[1].querySelector('.kpi-value');
+    if (valEl) valEl.textContent = '¥' + goldValue.toLocaleString();
+    const goldPct = ((goldValue / totalAsset) * 100).toFixed(1);
+    
+    const kpiSubs = kpiCards[1].querySelectorAll('.kpi-sub');
+    // 今日涨跌（第一个 kpi-sub）
+    if (kpiSubs[0]) {
+      const up = goldTodayChange >= 0;
+      kpiSubs[0].innerHTML = `<span class="${up ? 'pnl-positive' : 'pnl-negative'}">${up ? '+' : ''}${goldTodayChange.toFixed(2)}% ${up ? '+' : '-'}¥${Math.abs(Math.round(goldTodayPnl)).toLocaleString()} 今日</span>`;
+    }
+    // 累计盈亏（第二个 kpi-sub）
+    if (kpiSubs[1]) {
+      const up = goldTotalPnl >= 0;
+      kpiSubs[1].innerHTML = `<span class="${up ? 'pnl-positive' : 'pnl-negative'}">${up ? '+' : ''}${goldTotalReturn.toFixed(1)}% ${up ? '+' : '-'}¥${Math.abs(Math.round(goldTotalPnl)).toLocaleString()} 累计</span>`;
+    }
+    // 成本（第三个 kpi-sub）
+    if (kpiSubs[2]) {
+      kpiSubs[2].innerHTML = `成本 <span style="color: var(--muted2);">¥${Math.round(GOLD_COST).toLocaleString()}</span>`;
+    }
+    // 占总资产比例（第四个 kpi-sub）
+    if (kpiSubs[3]) {
+      kpiSubs[3].innerHTML = `占总资产 <span class="${goldPct > 60 ? 'down' : 'up'}">${goldPct}%</span> · ${goldPct > 60 ? '偏高' : '正常'}`;
+    }
+  }
+  // 权益类资产
+  if (kpiCards[2]) {
+    const valEl = kpiCards[2].querySelector('.kpi-value');
+    if (valEl) valEl.textContent = '¥' + fundValue.toLocaleString();
+    const fundPct = ((fundValue / totalAsset) * 100).toFixed(1);
+    
+    const kpiSubs = kpiCards[2].querySelectorAll('.kpi-sub');
+    // 今日涨跌（第一个 kpi-sub）
+    if (kpiSubs[0]) {
+      const up = fundTodayChange >= 0;
+      kpiSubs[0].innerHTML = `<span class="${up ? 'pnl-positive' : 'pnl-negative'}">${up ? '+' : ''}${fundTodayChange.toFixed(2)}% ${up ? '+' : '-'}¥${Math.abs(Math.round(fundTodayPnl)).toLocaleString()} 今日</span>`;
+    }
+    // 累计盈亏（第二个 kpi-sub）
+    if (kpiSubs[1]) {
+      const up = fundTotalPnl >= 0;
+      kpiSubs[1].innerHTML = `<span class="${up ? 'pnl-positive' : 'pnl-negative'}">${up ? '+' : ''}${fundTotalReturn.toFixed(1)}% ${up ? '+' : '-'}¥${Math.abs(Math.round(fundTotalPnl)).toLocaleString()} 累计</span>`;
+    }
+    // 成本（第三个 kpi-sub）
+    if (kpiSubs[2]) {
+      const fundCost = data.funds.reduce((s, f) => s + (f.cost || 0), 0);
+      kpiSubs[2].innerHTML = `成本 <span style="color: var(--muted2);">¥${Math.round(fundCost).toLocaleString()}</span>`;
+    }
+    // 占总资产比例（第四个 kpi-sub）
+    if (kpiSubs[3]) {
+      kpiSubs[3].innerHTML = `占总资产 <span class="up">${fundPct}%</span>`;
+    }
+  }
+  // 应急金
+  if (kpiCards[3]) {
+    const emergency = wealthData.savingAllocation.emergency || 0;
+    kpiCards[3].querySelector('.kpi-value').textContent = '¥' + emergency.toLocaleString();
+  }
+
+  // 现金与储蓄卡片
+  const cashCardValue = document.querySelector('.cash-card-value');
+  if (cashCardValue) cashCardValue.textContent = '¥' + cash.toLocaleString();
+
+  // ====== 财务目标 ======
+  const goalItems = document.querySelectorAll('.goal-item');
+  // 应急金目标
+  const emergencyGoal = monthlyExpense * 3;
+  const emergencyCurrent = wealthData.savingAllocation.emergency || 0;
+  if (goalItems[0]) {
+    const pct = emergencyGoal > 0 ? Math.min(100, (emergencyCurrent / emergencyGoal) * 100) : 0;
+    goalItems[0].querySelector('.goal-percent').textContent = pct.toFixed(0) + '%';
+    goalItems[0].querySelector('.goal-bar-fill').style.width = pct + '%';
+    goalItems[0].querySelector('.goal-meta span:first-child').textContent = '¥' + emergencyCurrent.toLocaleString() + ' / ¥' + emergencyGoal.toLocaleString();
+    const monthsNeeded = pct >= 100 ? 0 : Math.ceil((emergencyGoal - emergencyCurrent) / (wealthData.savingAllocation.emergency || 1000));
+    goalItems[0].querySelector('.goal-meta span:last-child').textContent = '预计约 ' + monthsNeeded + ' 个月';
+  }
+  // 投资回本
+  if (goalItems[1]) {
+    const pct = investCost > 0 ? Math.min(100, (investValue / investCost) * 100) : 0;
+    goalItems[1].querySelector('.goal-percent').textContent = pct.toFixed(1) + '%';
+    goalItems[1].querySelector('.goal-bar-fill').style.width = pct + '%';
+    goalItems[1].querySelector('.goal-meta span:first-child').textContent = '¥' + investValue.toLocaleString() + ' / ¥' + investCost.toLocaleString();
+    const monthlyInvest = monthlySaving;
+    const monthsNeeded = pct >= 100 ? 0 : Math.ceil((investCost - investValue) / monthlyInvest);
+    goalItems[1].querySelector('.goal-meta span:last-child').textContent = '预计约 ' + monthsNeeded + ' 个月';
+  }
+  // 总资产 20 万
+  if (goalItems[2]) {
+    const target20w = 200000;
+    const pct = Math.min(100, (totalAsset / target20w) * 100);
+    goalItems[2].querySelector('.goal-percent').textContent = pct.toFixed(1) + '%';
+    goalItems[2].querySelector('.goal-bar-fill').style.width = pct + '%';
+    goalItems[2].querySelector('.goal-meta span:first-child').textContent = '¥' + totalAsset.toLocaleString() + ' / ¥200,000';
+    const monthsNeeded = pct >= 100 ? 0 : Math.ceil((target20w - totalAsset) / monthlySaving);
+    goalItems[2].querySelector('.goal-meta span:last-child').textContent = '预计约 ' + monthsNeeded + ' 个月';
+  }
+  // 第一个 50 万
+  if (goalItems[3]) {
+    const target50w = 500000;
+    const pct = Math.min(100, (totalAsset / target50w) * 100);
+    goalItems[3].querySelector('.goal-percent').textContent = pct.toFixed(1) + '%';
+    goalItems[3].querySelector('.goal-bar-fill').style.width = pct + '%';
+    goalItems[3].querySelector('.goal-meta span:first-child').textContent = '¥' + totalAsset.toLocaleString() + ' / ¥500,000';
+    const monthsNeeded = pct >= 100 ? 0 : Math.ceil((target50w - totalAsset) / monthlySaving);
+    goalItems[3].querySelector('.goal-meta span:last-child').textContent = '预计约 ' + monthsNeeded + ' 个月';
   }
 
   // 更新月度收支
@@ -2010,38 +2272,337 @@ function renderWealthData() {
     if (totalRow) totalRow.textContent = savingRate.toFixed(1) + '%';
   }
 
-  // 更新饼图（资产分布）
+  // ====== 资产成长轨迹折线图 ======
+  if (typeof chartSavings !== 'undefined' && typeof data !== 'undefined' && data.history) {
+    chartSavings.setOption({
+      xAxis: {
+        type: 'category',
+        data: data.history.map(h => h.date),
+        axisLine: { lineStyle: { color: 'rgba(148,163,184,0.2)' } },
+        axisLabel: { color: '#64748b', fontSize: 11 }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        splitLine: { lineStyle: { color: 'rgba(148,163,184,0.1)' } },
+        axisLabel: {
+          color: '#64748b',
+          fontSize: 11,
+          formatter: function(v) { return (v/10000).toFixed(0) + '万'; }
+        }
+      },
+      grid: { left: 50, right: 20, top: 30, bottom: 30 },
+      series: [{
+        type: 'line',
+        data: data.history.map(h => h.value),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { color: '#f59e0b', width: 2.5 },
+        itemStyle: { color: '#f59e0b', borderColor: '#0a0f1c', borderWidth: 2 },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(245,158,11,0.25)' },
+              { offset: 1, color: 'rgba(245,158,11,0)' }
+            ]
+          }
+        }
+      }]
+    });
+  }
+
+  // ====== 资产分布饼图 ======
   if (typeof chartAllocation !== 'undefined') {
-    const goldValue = typeof data !== 'undefined' ? data.portfolio.goldValue : 94627;
-    const fundValue = typeof data !== 'undefined' ? data.portfolio.fundValue : 30357;
+    // 按基金类型分类
+    let nasdaqValue = 0, stockFundValue = 0, resourceValue = 0, indexValue = 0;
+    if (typeof data !== 'undefined' && data.funds) {
+      data.funds.forEach(f => {
+        if (f.code === '006479') nasdaqValue = f.value;
+        else if (f.category === '周期资源') resourceValue = f.value;
+        else if (f.category === '半导体行业' || f.category === '科技成长') stockFundValue += f.value;
+        else indexValue += f.value;
+      });
+    }
     chartAllocation.setOption({
       series: [{
+        type: 'pie',
+        radius: ['45%', '70%'],
+        center: ['50%', '50%'],
+        avoidLabelOverlap: true,
+        itemStyle: { borderRadius: 4, borderColor: '#0a0f1c', borderWidth: 2 },
+        label: {
+          show: true,
+          position: 'outside',
+          color: '#94a3b8',
+          fontSize: 11,
+          formatter: '{b}\n{d}%'
+        },
+        labelLine: { lineStyle: { color: 'rgba(148,163,184,0.3)' } },
         data: [
           { value: cash, name: '现金', itemStyle: { color: '#3b82f6' } },
           { value: goldValue, name: '黄金', itemStyle: { color: '#f59e0b' } },
-          { value: Math.round(fundValue * 0.33), name: '纳指100', itemStyle: { color: '#34d399' } },
-          { value: Math.round(fundValue * 0.32), name: '偏股基金', itemStyle: { color: '#ef4444' } },
-          { value: Math.round(fundValue * 0.13), name: '资源基金', itemStyle: { color: '#3b82f6' } },
-          { value: Math.round(fundValue * 0.15), name: '半导体基金', itemStyle: { color: '#f97316' } },
-          { value: Math.round(fundValue * 0.07), name: '指数基金', itemStyle: { color: '#8b5cf6' } }
-        ]
+          { value: nasdaqValue, name: '纳指100', itemStyle: { color: '#34d399' } },
+          { value: stockFundValue, name: '偏股基金', itemStyle: { color: '#ef4444' } },
+          { value: resourceValue, name: '资源基金', itemStyle: { color: '#f97316' } },
+          { value: indexValue, name: '指数基金', itemStyle: { color: '#8b5cf6' } }
+        ].filter(d => d.value > 0)
       }]
     });
   }
 
   // 更新更新时间
   const updateTimeEl = document.querySelector('.update-time span:last-child');
-  if (updateTimeEl) {
-    const now = new Date();
-    const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-    updateTimeEl.textContent = dateStr + ' · 手动更新';
+  if (updateTimeEl && typeof data !== 'undefined' && data.updateTime) {
+    const t = new Date(data.updateTime);
+    const dateStr = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+    const timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    updateTimeEl.textContent = dateStr + ' ' + timeStr + ' · 数据更新';
   }
 }
 
 // 页面加载完成后渲染
 window.addEventListener('load', function() {
+  // 注册 Service Worker (PWA 支持)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.log('SW registration failed:', err);
+    });
+  }
+  
   renderWealthData();
+  // 加载实时数据（更新投资资产）
+  loadWealthRealtime();
+  // 每5分钟刷新一次
+  setInterval(loadWealthRealtime, 5 * 60 * 1000);
 });
+
+// ========== 实时行情数据获取 ==========
+const WealthRealtime = {
+  _jsonpCounter: 0,
+  _loadSinaHQ(codes) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = `https://hq.sinajs.cn/list=${codes}&_=${Date.now()}`;
+      script.onload = () => {
+        document.head.removeChild(script);
+        const results = {};
+        codes.split(',').forEach(code => {
+          const varName = 'hq_str_' + code.replace(/[.-]/g, '_').toLowerCase();
+          if (window[varName]) {
+            results[code] = window[varName];
+            delete window[varName];
+          }
+        });
+        resolve(results);
+      };
+      script.onerror = () => {
+        document.head.removeChild(script);
+        reject(new Error('Failed'));
+      };
+      document.head.appendChild(script);
+      setTimeout(() => reject(new Error('Timeout')), 8000);
+    });
+  },
+  async getGoldPrice() {
+    try {
+      const result = await this._loadSinaHQ('hf_GC');
+      if (result['hf_GC']) {
+        const parts = result['hf_GC'].split(',');
+        if (parts.length >= 5) {
+          const priceUSD = parseFloat(parts[0]);
+          const prevClose = parseFloat(parts[9]);
+          const usdToCny = 7.25;
+          const pricePerGram = (priceUSD * usdToCny) / 31.1035;
+          const prevCloseGram = (prevClose * usdToCny) / 31.1035;
+          const changeGram = pricePerGram - prevCloseGram;
+          const changeGramPercent = prevCloseGram ? (changeGram / prevCloseGram) * 100 : 0;
+          return {
+            price: Math.round(pricePerGram * 100) / 100,
+            changePercent: Math.round(changeGramPercent * 100) / 100
+          };
+        }
+      }
+    } catch(e) { console.warn('金价获取失败:', e); }
+    return null;
+  },
+  async getFundRealtime(codes) {
+    const results = [];
+    for (const code of codes) {
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          const cb = 'fund_w_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+          window[cb] = function(d) { resolve(d); document.head.removeChild(script); delete window[cb]; };
+          script.onerror = () => { reject(new Error('err')); document.head.removeChild(script); delete window[cb]; };
+          script.src = `https://fundgz.1234567.com.cn/js/${code}.js?rt=${Date.now()}`;
+          document.head.appendChild(script);
+          setTimeout(() => { if(window[cb]) reject(new Error('to')); }, 5000);
+        });
+        if (result && result.gsz) {
+          results.push({ code: result.fundcode, estimateChange: parseFloat(result.gszzl) });
+        }
+      } catch(e) {}
+    }
+    return results;
+  }
+};
+
+// 实时数据基准值（只初始化一次，避免累积计算误差）
+let wealthRealtimeBase = null;
+
+function getWealthRealtimeBase() {
+  if (wealthRealtimeBase) return wealthRealtimeBase;
+  if (typeof data === 'undefined') return null;
+  
+  // 计算基准值（基于原始数据，不会被实时更新修改）
+  let goldGrams = 0;
+  if (data.goldHistory && data.goldHistory.length > 0) {
+    goldGrams = data.portfolio.goldValue / data.goldHistory[data.goldHistory.length - 1].price;
+  }
+  
+  // 基金原始市值和成本
+  const fundBaseValue = data.funds.reduce((s, f) => s + f.value, 0);
+  const fundBaseCost = data.funds.reduce((s, f) => s + (f.cost || 0), 0);
+  
+  // 黄金昨日价格（用于计算今日涨跌）
+  let goldPrevPrice = 0;
+  if (data.goldHistory && data.goldHistory.length >= 2) {
+    goldPrevPrice = data.goldHistory[data.goldHistory.length - 2].price;
+  }
+  
+  // 基金今日原始涨跌幅（从 data.funds 中计算）
+  let fundBaseTodayPnl = 0;
+  data.funds.forEach(f => {
+    if (f.today && f.today.change && f.today.changeAmount === undefined) {
+      const changeStr = f.today.change.replace('%', '').replace('+', '');
+      const changePct = parseFloat(changeStr) || 0;
+      const changeRate = changePct / 100;
+      // 正确公式：今日盈亏 = 今日市值 × 涨跌幅 ÷ (1 + 涨跌幅)
+      f.today.changeAmount = Math.round(f.value * changeRate / (1 + changeRate) * 100) / 100;
+    }
+    fundBaseTodayPnl += f.today?.changeAmount || 0;
+  });
+  
+  wealthRealtimeBase = {
+    goldGrams,           // 黄金克数（固定）
+    goldPrevPrice,       // 黄金昨日价格（固定）
+    fundBaseValue,       // 基金原始总市值（固定）
+    fundBaseCost,        // 基金总成本（固定）
+    fundBaseTodayPnl,    // 基金原始今日盈亏（固定）
+    goldBaseValue: data.portfolio.goldValue,  // 黄金原始市值（固定）
+  };
+  
+  return wealthRealtimeBase;
+}
+
+// 加载实时数据并更新个人总资产页面
+async function loadWealthRealtime() {
+  if (typeof data === 'undefined') return;
+  
+  const base = getWealthRealtimeBase();
+  if (!base) return;
+  
+  try {
+    const fundCodes = data.funds.map(f => f.code);
+    const [gold, funds] = await Promise.all([
+      WealthRealtime.getGoldPrice().catch(() => null),
+      WealthRealtime.getFundRealtime(fundCodes).catch(() => [])
+    ]);
+    
+    let goldValue = base.goldBaseValue;
+    let goldTodayPnl = 0;
+    let goldTodayChange = 0;
+    let fundValue = base.fundBaseValue;
+    let fundTodayPnl = base.fundBaseTodayPnl;
+    let fundTodayChange = 0;
+    let hasUpdate = false;
+    
+    // 更新黄金市值（基于固定克数计算）
+    if (gold && base.goldGrams > 0) {
+      goldValue = Math.round(base.goldGrams * gold.price);
+      // 今日盈亏 = 克数 * (当前价 - 昨日价)
+      if (base.goldPrevPrice > 0) {
+        goldTodayPnl = base.goldGrams * (gold.price - base.goldPrevPrice);
+        goldTodayChange = ((gold.price - base.goldPrevPrice) / base.goldPrevPrice) * 100;
+      }
+      hasUpdate = true;
+    }
+    
+    // 更新基金市值（基于昨日市值计算实时估值，避免重复计算）
+    if (funds && funds.length > 0) {
+      const fundMap = {};
+      funds.forEach(f => { fundMap[f.code] = f; });
+      let totalFundValue = 0;
+      let totalTodayPnl = 0;
+      
+      data.funds.forEach(fund => {
+        const rt = fundMap[fund.code];
+        // 先确保每只基金有 today.changeAmount
+        if (fund.today && fund.today.change && fund.today.changeAmount === undefined) {
+          const changeStr = fund.today.change.replace('%', '').replace('+', '');
+          const changePct = parseFloat(changeStr) || 0;
+          const changeRate = changePct / 100;
+          // 正确公式：今日盈亏 = 今日市值 × 涨跌幅 ÷ (1 + 涨跌幅)
+          fund.today.changeAmount = Math.round(fund.value * changeRate / (1 + changeRate) * 100) / 100;
+        }
+        
+        if (rt) {
+          // 昨日市值 = 当前市值 - 今日盈亏（以收盘价计算的）
+          const yesterdayValue = fund.value - (fund.today?.changeAmount || 0);
+          // 实时估值 = 昨日市值 × (1 + 实时涨跌幅)
+          // 因为实时涨跌幅是相对于昨日净值的
+          const newValue = Math.round(yesterdayValue * (1 + rt.estimateChange / 100) * 100) / 100;
+          // 今日盈亏 = 实时估值 - 昨日市值
+          const todayChange = newValue - yesterdayValue;
+          totalFundValue += newValue;
+          totalTodayPnl += todayChange;
+        } else {
+          totalFundValue += fund.value;
+          totalTodayPnl += fund.today?.changeAmount || 0;
+        }
+      });
+      
+      fundValue = Math.round(totalFundValue);
+      fundTodayPnl = totalTodayPnl;
+      const fundYesterdayValue = base.fundBaseValue - base.fundBaseTodayPnl;
+      fundTodayChange = fundYesterdayValue > 0 ? (fundTodayPnl / fundYesterdayValue) * 100 : 0;
+      hasUpdate = true;
+    }
+    
+    if (hasUpdate) {
+      // 更新 portfolio 数据
+      data.portfolio.goldValue = goldValue;
+      data.portfolio.fundValue = fundValue;
+      data.portfolio.totalValue = goldValue + fundValue;
+      
+      // 保存今日盈亏数据，供 renderWealthData 使用
+      data.portfolio.goldTodayPnl = goldTodayPnl;
+      data.portfolio.goldTodayChange = goldTodayChange;
+      data.portfolio.fundTodayPnl = fundTodayPnl;
+      data.portfolio.fundTodayChange = fundTodayChange;
+      
+      // 重新计算总盈亏（成本不变）
+      const totalCost = data.portfolio.totalCost;
+      data.portfolio.totalPnL = data.portfolio.totalValue - totalCost;
+      data.portfolio.totalReturn = totalCost > 0 ? data.portfolio.totalPnL / totalCost : 0;
+      
+      renderWealthData();
+      
+      // 更新时间显示为实时
+      const updateTimeEl = document.querySelector('.update-time span:last-child');
+      if (updateTimeEl) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        updateTimeEl.textContent = `实时 ${timeStr} · 估值仅供参考`;
+      }
+    }
+  } catch(e) {
+    console.warn('实时数据加载失败:', e);
+  }
+}
 </script>
 </body>
 </html>
